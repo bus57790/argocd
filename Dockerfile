@@ -1,18 +1,22 @@
-# Step 1: Base image
 FROM node:18-alpine
 
-# Step 2: Set working directory
+# Set working directory
 WORKDIR /usr/src/app
 
-# Step 3: Copy package files and install dependencies
+# Copy dependency manifests
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install --only=production
 
-# Step 4: Copy application source code
+# Copy application files
 COPY . .
 
-# Step 5: Expose application port
+# Set non-root user for security (Passes SonarQube Docker Security Gate)
+USER node
+
+# Expose port
 EXPOSE 3000
 
-# Step 6: Define default start command
+# Container entrypoint
 CMD ["npm", "start"]
