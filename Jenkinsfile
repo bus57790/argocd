@@ -3,10 +3,9 @@ pipeline {
 
     environment {
         // Repository & Image Configuration
-        GIT_REPO_URL     = 'github.com/YOUR_USERNAME/sample-microservice.git'
+        GIT_REPO_URL     = 'github.com/bus57790/argocd.git'
         DOCKER_REGISTRY  = 'docker.io'
-        DOCKER_IMAGE     = 'YOUR_DOCKERHUB_USERNAME/sample-microservice'
-        IMAGE_TAG        = "${BUILD_NUMBER}-${BUILD_TIMESTAMP}"
+        DOCKER_IMAGE     = 'bus57790/sample-microservice'
         
         // SonarQube Tool & Server Names (configured in Global Tool Configuration)
         SONAR_SERVER     = 'SonarQube-Server'
@@ -28,7 +27,8 @@ pipeline {
         stage('Initialize & Timestamp') {
             steps {
                 script {
-                    BUILD_TIMESTAMP = sh(script: "date +'%Y%m%d-%H%M%S'", returnStdout: true).trim()
+                    def timestamp = sh(script: "date +'%Y%m%d-%H%M%S'", returnStdout: true).trim()
+                    IMAGE_TAG = "${BUILD_NUMBER}-${timestamp}"
                     echo "Building Release Tag: ${IMAGE_TAG}"
                 }
             }
@@ -64,10 +64,21 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDS_ID) {
-                        def customImage = docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}")
-                        customImage.push()
-                        customImage.push("latest")
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDS_ID, passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh """
+                            # Authenticate to Docker Registry
+                            echo "\$DOCKER_PASSWORD" | docker login -u "\$DOCKER_USERNAME" --password-stdin ${DOCKER_REGISTRY}
+
+                            # Build image tags
+                            docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} -t ${DOCKER_IMAGE}:latest .
+
+                            # Push tags
+                            docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                            docker push ${DOCKER_IMAGE}:latest
+
+                            # Clean up registry auth local state
+                            docker logout ${DOCKER_REGISTRY}
+                        """
                     }
                 }
             }
