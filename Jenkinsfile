@@ -7,13 +7,13 @@ pipeline {
         DOCKER_REGISTRY  = 'docker.io'
         DOCKER_IMAGE     = 'bus57790/sample-microservice'
         
-        // SonarQube Tool & Server Names (configured in Global Tool Configuration)
+        // SonarQube Tool & Server Names
         SONAR_SERVER     = 'SonarQube-Server'
         SONAR_SCANNER    = 'SonarScanner'
 
         // Credentials IDs
         GIT_CREDS_ID     = 'github-access-token'
-        DOCKER_CREDS_ID  = 'dockerhub-credentials'
+        DOCKER_CREDS_ID  = 'dockerhub-credentials' // Ensure this exists in Jenkins Credentials!
         SLACK_WEBHOOK_ID = 'slack-webhook-url'
     }
 
@@ -28,8 +28,8 @@ pipeline {
             steps {
                 script {
                     def timestamp = sh(script: "date +'%Y%m%d-%H%M%S'", returnStdout: true).trim()
-                    IMAGE_TAG = "${BUILD_NUMBER}-${timestamp}"
-                    echo "Building Release Tag: ${IMAGE_TAG}"
+                    env.IMAGE_TAG = "${BUILD_NUMBER}-${timestamp}"
+                    echo "Building Release Tag: ${env.IMAGE_TAG}"
                 }
             }
         }
@@ -70,10 +70,10 @@ pipeline {
                             echo "\$DOCKER_PASSWORD" | docker login -u "\$DOCKER_USERNAME" --password-stdin ${DOCKER_REGISTRY}
 
                             # Build image tags
-                            docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} -t ${DOCKER_IMAGE}:latest .
+                            docker build -t ${DOCKER_IMAGE}:${env.IMAGE_TAG} -t ${DOCKER_IMAGE}:latest .
 
                             # Push tags
-                            docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                            docker push ${DOCKER_IMAGE}:${env.IMAGE_TAG}
                             docker push ${DOCKER_IMAGE}:latest
 
                             # Clean up registry auth local state
@@ -92,11 +92,11 @@ pipeline {
                         git config user.email "ci@jenkins.local"
                         
                         # Update image tag inside deployment manifest using sed
-                        sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|g' k8s/deployment.yaml
+                        sed -i 's|image: ${DOCKER_IMAGE}:.*|image: ${DOCKER_IMAGE}:${env.IMAGE_TAG}|g' k8s/deployment.yaml
                         
                         # Commit and push changes back to main branch for Argo CD sync
                         git add k8s/deployment.yaml
-                        git commit -m "chore(ci): update deployment image tag to ${IMAGE_TAG} [skip ci]" || exit 0
+                        git commit -m "chore(ci): update deployment image tag to ${env.IMAGE_TAG} [skip ci]" || exit 0
                         git push https://${GIT_USERNAME}:${GIT_PASSWORD}@${GIT_REPO_URL} HEAD:main
                     """
                 }
@@ -106,9 +106,9 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline succeeded! Argo CD will detect commit ${IMAGE_TAG} and auto-sync to Kubernetes."
+            echo "Pipeline succeeded! Argo CD will detect commit ${env.IMAGE_TAG} and auto-sync to Kubernetes."
             script {
-                sendSlackNotification("SUCCESS", "Pipeline built successfully. Manifest updated to tag `${IMAGE_TAG}`. Waiting for Argo CD sync.")
+                sendSlackNotification("SUCCESS", "Pipeline built successfully. Manifest updated to tag `${env.IMAGE_TAG}`. Waiting for Argo CD sync.")
             }
         }
         failure {
@@ -123,22 +123,27 @@ pipeline {
 // Helper Function for Pipeline Notifications
 def sendSlackNotification(String status, String message) {
     withCredentials([string(credentialsId: SLACK_WEBHOOK_ID, variable: 'WEBHOOK_URL')]) {
-        def color = (status == "SUCCESS") ? "#36a64f" : "#danger"
-        def payload = """
-        {
-            "attachments": [
+        sh(
+            script: '''
+                payload=$(cat <<EOF
                 {
-                    "color": "${color}",
-                    "title": "Jenkins CI: ${status}",
-                    "text": "${message}",
-                    "fields": [
-                        { "title": "Job", "value": "${ENV:JOB_NAME}", "short": true },
-                        { "title": "Build", "value": "#${ENV:BUILD_NUMBER}", "short": true }
+                    "attachments": [
+                        {
+                            "color": "'"${status == 'SUCCESS' ? '#36a64f' : '#danger'}"'",
+                            "title": "Jenkins CI: '"${status}"'",
+                            "text": "'"${message}"'",
+                            "fields": [
+                                { "title": "Job", "value": "'"${JOB_NAME}"'", "short": true },
+                                { "title": "Build", "value": "#'"${BUILD_NUMBER}"'", "short": true }
+                            ]
+                        }
                     ]
                 }
-            ]
-        }
-        """
-        sh(script: "curl -X POST -H 'Content-Type: application/json' --data '${payload.replaceAll('\n', '')}' ${WEBHOOK_URL}", returnStdout: false)
+                EOF
+                )
+                curl -X POST -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
+            ''', 
+            returnStdout: false
+        )
     }
 }
