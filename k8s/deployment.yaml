@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-microservice
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sample-microservice
+  template:
+    metadata:
+      labels:
+        app: sample-microservice
+    spec:
+      containers:
+      - name: microservice
+        image: bus57790/sample-microservice:v1.0.0
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-microservice
+  namespace: default
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: sample-microservice
