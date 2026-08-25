@@ -19,10 +19,10 @@ spec:
           image: ghcr.io/bus57790/argocd-simple-app:1
           imagePullPolicy: Always
           ports:
-            - containerPort: 8080
+            - containerPort: 3000
           readinessProbe:
             httpGet:
               path: /
-              port: 8090
+              port: 3000
             initialDelaySeconds: 5
             periodSeconds: 5
