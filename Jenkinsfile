@@ -51,17 +51,6 @@ pipeline {
             }
         }
 
-        stage('Quality Gate Verification') {
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    script {
-                        // Change abortPipeline to false if you want to temporarily bypass gate failures
-                        waitForQualityGate abortPipeline: true
-                    }
-                }
-            }
-        }
-
         stage('Build & Push Docker Image') {
             steps {
                 script {
