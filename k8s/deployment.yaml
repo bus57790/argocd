@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: microservice
-        image: bus57790/sample-microservice:533-20260825-154828
+        image: bus57790/sample-microservice:534-20260825-154909
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
