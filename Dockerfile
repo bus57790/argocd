@@ -1,16 +1,18 @@
 FROM node:18-alpine
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Copy all application files directly to working directory
+# Explicitly copy package.json first
+COPY package.json ./
+
+# Install dependencies if present
+RUN npm install --only=production || true
+
+# Copy remaining project files
 COPY . .
 
-# Set non-root user for security
 USER node
 
-# Expose port
 EXPOSE 3000
 
-# Container entrypoint
 CMD ["npm", "start"]
