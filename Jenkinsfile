@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        // Repository & Image Configuration
+        // Repository & Image Configuration for local lab
         GIT_REPO_URL     = 'github.com/bus57790/argocd.git'
         DOCKER_REGISTRY  = 'docker.io'
         DOCKER_IMAGE     = 'bus57790/sample-microservice'
