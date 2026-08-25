@@ -13,7 +13,7 @@ pipeline {
 
         // Credentials IDs
         GIT_CREDS_ID     = 'github-access-token'
-        DOCKER_CREDS_ID  = 'dockerhub-credentials' // Ensure this exists in Jenkins Credentials!
+        DOCKER_CREDS_ID  = 'dockerhub-credentials'
         SLACK_WEBHOOK_ID = 'slack-webhook-url'
     }
 
@@ -55,6 +55,7 @@ pipeline {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     script {
+                        // Change abortPipeline to false if you want to temporarily bypass gate failures
                         waitForQualityGate abortPipeline: true
                     }
                 }
@@ -123,27 +124,27 @@ pipeline {
 // Helper Function for Pipeline Notifications
 def sendSlackNotification(String status, String message) {
     withCredentials([string(credentialsId: SLACK_WEBHOOK_ID, variable: 'WEBHOOK_URL')]) {
-        sh(
-            script: '''
-                payload=$(cat <<EOF
-                {
-                    "attachments": [
-                        {
-                            "color": "'"${status == 'SUCCESS' ? '#36a64f' : '#danger'}"'",
-                            "title": "Jenkins CI: '"${status}"'",
-                            "text": "'"${message}"'",
-                            "fields": [
-                                { "title": "Job", "value": "'"${JOB_NAME}"'", "short": true },
-                                { "title": "Build", "value": "#'"${BUILD_NUMBER}"'", "short": true }
-                            ]
-                        }
-                    ]
-                }
-                EOF
-                )
-                curl -X POST -H 'Content-Type: application/json' --data "$payload" "$WEBHOOK_URL"
-            ''', 
-            returnStdout: false
-        )
+        script {
+            def color = (status == 'SUCCESS') ? '#36a64f' : 'danger'
+            def payload = """{
+                "attachments": [
+                    {
+                        "color": "${color}",
+                        "title": "Jenkins CI: ${status}",
+                        "text": "${message}",
+                        "fields": [
+                            { "title": "Job", "value": "${env.JOB_NAME}", "short": true },
+                            { "title": "Build", "value": "#${env.BUILD_NUMBER}", "short": true }
+                        ]
+                    }
+                ]
+            }"""
+            
+            sh script: """
+                curl -s -X POST -H 'Content-Type: application/json' \
+                     --data '${payload.replace('\n', '')}' \
+                     "\$WEBHOOK_URL"
+            """, returnStdout: false
+        }
     }
 }
