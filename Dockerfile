@@ -2,17 +2,13 @@ FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
-# Explicitly copy package.json first
-COPY package.json ./
-
-# Install dependencies if present
+COPY package*.json ./
 RUN npm install --only=production || true
 
-# Copy remaining project files
 COPY . .
-
-USER node
 
 EXPOSE 3000
 
+# Call Node directly on your entry file instead of npm start
 CMD ["node", "app.js"]
+
