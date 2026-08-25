@@ -3,16 +3,10 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy dependency manifests
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install --only=production
-
-# Copy application files
+# Copy all application files directly to working directory
 COPY . .
 
-# Set non-root user for security (Passes SonarQube Docker Security Gate)
+# Set non-root user for security
 USER node
 
 # Expose port
