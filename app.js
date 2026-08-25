@@ -1,4 +1,4 @@
-import express from 'express';
+const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
@@ -6,5 +6,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(3000, '0.0.0.0', () => {
-  console.log('App is running on port 3000');
+  console.log('App running on port 3000');
 });
