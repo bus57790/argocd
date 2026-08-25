@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: microservice
-        image: bus57790/sample-microservice:v1.0.0
+        image: bus57790/sample-microservice:8-20260825-014316
         ports:
         - containerPort: 3000
 ---
