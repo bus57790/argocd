@@ -1,8 +1,10 @@
-const express = require('express');
+import express from 'express';
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.get('/health', (req, res) => res.json({ status: 'UP', timestamp: new Date() }));
-app.get('/', (req, res) => res.send('Microservice v1.0.0 is running!'));
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
 
-app.listen(PORT, () => console.log(`Server on port ${PORT}`));
+app.listen(3000, '0.0.0.0', () => {
+  console.log('App is running on port 3000');
+});
