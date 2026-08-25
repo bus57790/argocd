@@ -12,6 +12,8 @@ spec:
       labels:
         app: argocd-simple-app
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: argocd-simple-app
           image: ghcr.io/bus57790/argocd-simple-app:1
