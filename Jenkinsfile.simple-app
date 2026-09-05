@@ -58,7 +58,7 @@ pipeline {
                       git add simple-app/k8s/deployment.yaml
                       git diff --cached --quiet || git commit -m "deploy: simple-app build ${BUILD_NUMBER} [skip ci]"
 
-                      git remote set-url origin https://${GH_USER}:${GH_TOKEN}@github.com/bus57790/home-lab-devops.git
+                      git remote set-url origin https://${GH_USER}:${GH_TOKEN}@github.com/bus57790/argocd.git
                       git push origin HEAD:main
                     '''
                 }
