@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME   = 'argocd-simple-app'
+        IMAGE_NAME = 'ghcr.io/bus57790/argocd-simple-app'
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                dir('simple-app') {
+                    sh '''
+                      docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-container-registry',
+                    usernameVariable: 'GH_USER',
+                    passwordVariable: 'GH_TOKEN'
+                )]) {
+                    sh '''
+                      echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+                      docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    '''
+                }
+            }
+        }
+
+        stage('Update GitOps Manifest') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-container-registry',
+                    usernameVariable: 'GH_USER',
+                    passwordVariable: 'GH_TOKEN'
+                )]) {
+                    sh '''
+                      sed -i -E "s#image: ghcr.io/bus57790/argocd-simple-app:.*#image: ${IMAGE_NAME}:${BUILD_NUMBER}#" simple-app/k8s/deployment.yaml
+
+                      git config user.name "jenkins"
+                      git config user.email "jenkins@local"
+
+                      git add simple-app/k8s/deployment.yaml
+                      git diff --cached --quiet || git commit -m "deploy: simple-app build ${BUILD_NUMBER} [skip ci]"
+
+                      git remote set-url origin https://${GH_USER}:${GH_TOKEN}@github.com/bus57790/argocd.git
+                      git push origin HEAD:main
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'GitOps manifest updated. Argo CD will automatically sync the new image.'
+        }
+        failure {
+            echo 'Pipeline failed. Review the failed Jenkins stage.'
+        }
+    }
+}
