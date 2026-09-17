@@ -4,31 +4,25 @@ metadata:
   name: argocd-notifications-cm
   namespace: argocd
 data:
-  # Native Webhook Service integration
-  service.webhook.slack: |
-    url: $slack-token
-    headers:
-    - name: Content-Type
-      value: application/json
+  # Native Slack service definition
+  service.slack: |
+    token: $slack-token
 
+  # Templates using native message field instead of raw webhook body
   template.app-deployed: |
-    webhook:
-      slack:
-        method: POST
-        body: |
-          {
-            "text": "🚀 *Application Sync Succeeded*\n*App:* {{.app.metadata.name}}\n*Status:* {{.app.status.sync.status}}\n*Revision:* {{.app.status.sync.revision}}"
-          }
+    message: |
+      🚀 *Application Sync Succeeded*
+      *App:* {{.app.metadata.name}}
+      *Status:* {{.app.status.sync.status}}
+      *Revision:* {{.app.status.sync.revision}}
 
   template.app-sync-failed: |
-    webhook:
-      slack:
-        method: POST
-        body: |
-          {
-            "text": "⚠️ *Application Sync Failed*\n*App:* {{.app.metadata.name}}\n*Health:* {{.app.status.health.status}}"
-          }
+    message: |
+      ⚠️ *Application Sync Failed*
+      *App:* {{.app.metadata.name}}
+      *Health:* {{.app.status.health.status}}
 
+  # Triggers
   trigger.on-deployed: |
     - when: app.status.sync.status == 'Synced' and app.status.health.status == 'Healthy'
       send: [app-deployed]
