@@ -4,12 +4,14 @@ metadata:
   name: argocd-notifications-cm
   namespace: argocd
 data:
+  # Define the webhook service properly
   service.webhook.slack: |
     url: $slack-token
     headers:
-    - name: Content-Type
-      value: application/json
+      - name: Content-Type
+        value: application/json
 
+  # Define notification templates
   template.app-deployed: |
     webhook:
       slack:
@@ -18,7 +20,6 @@ data:
           {
             "text": "🚀 *Application Sync Succeeded*\n*App:* {{.app.metadata.name}}\n*Status:* {{.app.status.sync.status}}\n*Revision:* {{.app.status.sync.revision}}"
           }
-    recipient: slack
 
   template.app-sync-failed: |
     webhook:
@@ -28,8 +29,8 @@ data:
           {
             "text": "⚠️ *Application Sync Failed*\n*App:* {{.app.metadata.name}}\n*Health:* {{.app.status.health.status}}"
           }
-    recipient: slack
 
+  # Define triggers pointing to the templates
   trigger.on-deployed: |
     - when: app.status.sync.status == 'Synced' and app.status.health.status == 'Healthy'
       send: [app-deployed]
